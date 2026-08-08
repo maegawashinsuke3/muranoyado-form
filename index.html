@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ご予約リクエスト｜農家民宿 村の宿（兵庫県丹波市）</title>
+<meta name="description" content="兵庫県丹波市の1日1組限定・一棟貸し「農家民宿 村の宿」の予約リクエストフォームです。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <h1 class="hero-title">農家民宿 村の宿</h1>
+  <p class="hero-place">
+    兵庫県丹波市山南町南中115-6<br>
+    1日1組限定・一棟貸し
+  </p>
+</header>
+
+<main>
+
+  <!-- ============ 1. 宿の紹介文（要件書の確定稿。変更しないこと） ============ -->
+  <section class="intro">
+    <p class="lead">みんなの村の暮らしを、まるごと体験できます</p>
+    <p>
+      みんなの村には、1日1組限定の一棟貸し「農家民宿 村の宿」があります。<br>
+      ゆっくり泊まるだけでも、野菜の収穫や採卵等の農作業、<br>
+      サウナや農道散歩を楽しんでいただくのも自由です。
+    </p>
+    <p>
+      放し飼いの鶏、畑、地下水、薪ストーブ、焚き火。<br>
+      ここには、子どもたちに触れてほしい「暮らしの原型」があります。<br>
+      こんな生き方もあるんだ、と感じてほしい。<br>
+      「子どもが多いほど泊まりにくい宿」にはしたくないので、<br>
+      保護者様同伴の18歳未満のお子様は、宿泊費を無料にしました。
+    </p>
+    <p>
+      せわしない日常から離れて、自然の中で流れる時間をご堪能ください。
+    </p>
+  </section>
+
+  <!-- ============ 2. 注意書き ============ -->
+  <section class="notice">
+    <p>
+      こちらは<strong>予約リクエストフォーム</strong>です。送信いただいた時点では予約は確定しておりません。<br>
+      空き状況を確認のうえ、2日以内にメールでご連絡いたします。返信をもって予約確定となります。
+    </p>
+    <ul>
+      <li>1日1組限定・一棟貸し・素泊まり（定員5名）</li>
+      <li>保護者様同伴の18歳未満のお子様は宿泊費無料です</li>
+      <li>ご予約は<strong>2日前まで</strong>承っております（前日・当日のご予約はお受けできません）</li>
+    </ul>
+  </section>
+
+  <!-- ============ 3. フォーム本体 ============ -->
+  <section class="form-section" id="formSection">
+    <h2>ご予約リクエスト</h2>
+
+    <form id="reserveForm" novalidate>
+
+      <div class="field">
+        <label for="name">お名前（代表者様）<span class="req">必須</span></label>
+        <input type="text" id="name" name="name" autocomplete="name" required>
+      </div>
+
+      <div class="field">
+        <label for="email">メールアドレス<span class="req">必須</span></label>
+        <input type="email" id="email" name="email" autocomplete="email" inputmode="email" required>
+        <p class="hint">こちらのアドレスへ自動返信メールをお送りします。</p>
+      </div>
+
+      <div class="field">
+        <label for="tel">電話番号<span class="req">必須</span></label>
+        <input type="tel" id="tel" name="tel" autocomplete="tel" inputmode="tel" required>
+        <p class="hint">当日のご連絡用です。</p>
+      </div>
+
+      <!-- ===== 空き状況カレンダー（Googleカレンダーと連動） ===== -->
+      <div class="field">
+        <p class="cal-label">空き状況</p>
+
+        <div class="calendar-box" id="calendarBox" hidden>
+          <div class="cal-head">
+            <button type="button" class="cal-nav" id="calPrev" aria-label="前の月">‹</button>
+            <p class="cal-title" id="calTitle">—</p>
+            <button type="button" class="cal-nav" id="calNext" aria-label="次の月">›</button>
+          </div>
+
+          <div class="cal-grid cal-dow" aria-hidden="true">
+            <span class="cal-sun">日</span><span>月</span><span>火</span>
+            <span>水</span><span>木</span><span>金</span><span class="cal-sat">土</span>
+          </div>
+
+          <div class="cal-grid" id="calGrid"></div>
+
+          <p class="cal-legend">
+            <span class="lg-ok">○</span>ご予約いただけます
+            <span class="lg-ng">×</span>ご予約いただけません
+          </p>
+        </div>
+
+        <p class="cal-status" id="calStatus">空き状況を読み込んでいます…</p>
+      </div>
+
+      <div class="field">
+        <label for="date1">宿泊希望日（第1希望）<span class="req">必須</span></label>
+        <input type="date" id="date1" name="date1" required>
+        <p class="date-judge" id="date1Judge" hidden></p>
+        <p class="hint">
+          ご予約は2日前まで承っております。<span class="js-min-date">—</span>以降の日付をお選びください。
+        </p>
+      </div>
+
+      <div class="field">
+        <label for="date2">宿泊希望日（第2希望）<span class="opt">任意</span></label>
+        <input type="date" id="date2" name="date2">
+        <p class="date-judge" id="date2Judge" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="nights">泊数<span class="req">必須</span></label>
+        <select id="nights" name="nights" required>
+          <option value="">選択してください</option>
+          <option value="1泊">1泊</option>
+          <option value="2泊">2泊</option>
+          <option value="3泊以上">3泊以上</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="adults">大人（18歳以上）の人数<span class="req">必須</span></label>
+        <select id="adults" name="adults" required>
+          <option value="">選択してください</option>
+          <option value="1">1名</option>
+          <option value="2">2名</option>
+          <option value="3">3名</option>
+          <option value="4">4名</option>
+          <option value="5">5名</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="children">18歳未満のお子様の人数<span class="req">必須</span></label>
+        <select id="children" name="children" required>
+          <option value="0">0名</option>
+          <option value="1">1名</option>
+          <option value="2">2名</option>
+          <option value="3">3名</option>
+          <option value="4">4名</option>
+        </select>
+        <p class="hint">保護者様同伴の18歳未満のお子様は宿泊費無料です。</p>
+        <p class="inline-warn" id="capacityWarn" hidden>
+          定員は5名です。合計人数をご確認ください。
+        </p>
+      </div>
+
+      <div class="field">
+        <label for="childAges">お子様の年齢<span class="opt">任意</span></label>
+        <input type="text" id="childAges" name="childAges" placeholder="例：3歳、7歳">
+      </div>
+
+      <fieldset class="field">
+        <legend>体験してみたいこと<span class="opt">任意</span></legend>
+        <div class="checks">
+          <label><input type="checkbox" name="experiences" value="採卵"><span>採卵</span></label>
+          <label><input type="checkbox" name="experiences" value="野菜の収穫"><span>野菜の収穫</span></label>
+          <label><input type="checkbox" name="experiences" value="焚き火"><span>焚き火</span></label>
+          <label><input type="checkbox" name="experiences" value="サウナ"><span>サウナ</span></label>
+          <label><input type="checkbox" name="experiences" value="BBQ"><span>BBQ</span></label>
+          <label><input type="checkbox" name="experiences" value="薪割り"><span>薪割り</span></label>
+          <label><input type="checkbox" name="experiences" value="特になし・泊まってから決める"><span>特になし・泊まってから決める</span></label>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label for="source">当宿をどこで知りましたか<span class="opt">任意</span></label>
+        <select id="source" name="source">
+          <option value="">選択してください</option>
+          <option value="Instagram">Instagram</option>
+          <option value="YouTube">YouTube</option>
+          <option value="書籍">書籍</option>
+          <option value="Airbnb">Airbnb</option>
+          <option value="知人の紹介">知人の紹介</option>
+          <option value="検索">検索</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="message">ご質問・ご要望<span class="opt">任意</span></label>
+        <textarea id="message" name="message" rows="5"></textarea>
+      </div>
+
+      <!-- スパム対策用のhoneypot。人には見えない。入力があれば送信を無視する -->
+      <div class="hp" aria-hidden="true">
+        <label for="company">会社名（入力しないでください）</label>
+        <input type="text" id="company" name="company" tabindex="-1" autocomplete="off">
+      </div>
+
+      <p class="error-box" id="errorBox" hidden></p>
+
+      <button type="submit" class="submit-btn" id="submitBtn">リクエストを送信する</button>
+
+      <p class="hint center">
+        送信いただいた時点では予約は確定しておりません。
+      </p>
+    </form>
+  </section>
+
+  <!-- ============ 送信完了メッセージ（送信後に表示） ============ -->
+  <section class="thanks" id="thanks" hidden>
+    <h2>送信が完了しました</h2>
+    <p>
+      リクエストを受け付けました。空き状況を確認のうえ、2日以内にご連絡いたします。<br>
+      2日経っても返信がない場合は、お手数ですが迷惑メールフォルダをご確認ください。
+    </p>
+  </section>
+
+</main>
+
+<!-- ============ 4. フッター ============ -->
+<footer class="site-footer">
+  <p class="footer-name">農家民宿 村の宿</p>
+  <p class="footer-addr">兵庫県丹波市山南町南中115-6</p>
+  <p class="footer-tel">
+    <a href="tel:08030874720">080-3087-4720</a>
+  </p>
+  <p class="footer-links">
+    <a href="https://instagram.com/min.mura" target="_blank" rel="noopener">Instagram</a>
+  </p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
