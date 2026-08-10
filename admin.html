@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>村の宿 管理</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: #f6f3ec;
+    color: #333;
+    padding: 16px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.1rem; margin-bottom: 12px; color: #4a5d43; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    margin-bottom: 16px;
+  }
+  /* PIN画面 */
+  #pinArea input {
+    width: 100%;
+    font-size: 1.4rem;
+    text-align: center;
+    letter-spacing: .3em;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  button {
+    font-size: 1rem;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #4a5d43;
+    color: #fff;
+    width: 100%;
+    cursor: pointer;
+  }
+  button.sub { background: #999; }
+  button.danger { background: #a5533b; }
+  /* カレンダー */
+  .cal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .cal-head button { width: auto; padding: 8px 14px; }
+  .cal-head .month { font-size: 1.1rem; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th { font-size: .75rem; padding: 6px 0; color: #888; }
+  th.sun { color: #c0563c; }
+  th.sat { color: #3c6ec0; }
+  td {
+    height: 56px;
+    text-align: center;
+    vertical-align: top;
+    border: 1px solid #eee;
+    font-size: .9rem;
+    padding-top: 4px;
+    cursor: pointer;
+  }
+  td.empty { background: #fafafa; cursor: default; }
+  td.past { color: #ccc; cursor: default; background: #fafafa; }
+  td.closed { background: #f3d9d2; }
+  td.closed .d { font-weight: bold; color: #a5533b; }
+  td .memo {
+    display: block;
+    font-size: .6rem;
+    color: #a5533b;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 0 2px;
+  }
+  .legend { font-size: .75rem; color: #888; margin-top: 8px; }
+  .legend span.box {
+    display: inline-block; width: 12px; height: 12px;
+    background: #f3d9d2; border: 1px solid #e0b8ac;
+    vertical-align: middle; margin-right: 4px;
+  }
+  /* モーダル */
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.4);
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  #overlay.show { display: flex; }
+  #modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 400px;
+  }
+  #modal h2 { font-size: 1rem; margin-bottom: 12px; }
+  #modal input {
+    width: 100%;
+    font-size: 1rem;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  #modal .btns { display: flex; flex-direction: column; gap: 8px; }
+  #msg {
+    text-align: center;
+    font-size: .85rem;
+    color: #4a5d43;
+    min-height: 1.2em;
+    margin-bottom: 8px;
+  }
+  .loading { opacity: .5; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<h1>農家民宿 村の宿|空き状況の管理</h1>
+<div id="msg"></div>
+
+<!-- PIN入力 -->
+<div class="card" id="pinArea">
+  <p style="margin-bottom:8px; font-size:.9rem;">暗証番号を入力してください</p>
+  <input type="tel" id="pinInput" inputmode="numeric" autocomplete="off" placeholder="****">
+  <button onclick="login()">開く</button>
+</div>
+
+<!-- カレンダー -->
+<div class="card" id="calArea" style="display:none;">
+  <div class="cal-head">
+    <button onclick="moveMonth(-1)">◀</button>
+    <span class="month" id="monthLabel"></span>
+    <button onclick="moveMonth(1)">▶</button>
+  </div>
+  <table>
+    <thead>
+      <tr><th class="sun">日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th class="sat">土</th></tr>
+    </thead>
+    <tbody id="calBody"></tbody>
+  </table>
+  <p class="legend"><span class="box"></span>塞がっている日(タップで開けたりメモを直したりできます)。白い日はタップで塞げます。</p>
+</div>
+
+<!-- モーダル -->
+<div id="overlay">
+  <div id="modal">
+    <h2 id="modalTitle"></h2>
+    <div id="modalMemoArea">
+      <input type="text" id="memoInput" placeholder="メモ(任意)例:田中様/Airbnb/所用">
+    </div>
+    <div class="btns" id="modalBtns"></div>
+  </div>
+</div>
+
+<script>
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbw6-cZRCzsLRkUfqGOk-YJCXYb3oT1B7kH7M_AeSGUbujx4Q4ZsXWXiKejh6aHBMQLX/exec';
+
+var pin = '';
+var closedMemos = {};   // { '2026-08-15': 'メモ', ... }
+var current = new Date();
+current.setDate(1);
+
+function msg(t) { document.getElementById('msg').textContent = t || ''; }
+
+function ymd(y, m, d) {
+  return y + '-' + ('0' + (m + 1)).slice(-2) + '-' + ('0' + d).slice(-2);
+}
+
+function login() {
+  var p = document.getElementById('pinInput').value.trim();
+  if (!p) { msg('暗証番号を入れてください'); return; }
+  msg('確認中…');
+  fetch(GAS_URL + '?action=blocked&pin=' + encodeURIComponent(p))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok && data.memos) {
+        pin = p;
+        closedMemos = data.memos;
+        sessionStorage.setItem('muranoyado_pin', p);
+        document.getElementById('pinArea').style.display = 'none';
+        document.getElementById('calArea').style.display = 'block';
+        msg('');
+        render();
+      } else {
+        msg('暗証番号が違います');
+      }
+    })
+    .catch(function () { msg('通信に失敗しました。電波の良いところでもう一度どうぞ'); });
+}
+
+function reload() {
+  return fetch(GAS_URL + '?action=blocked&pin=' + encodeURIComponent(pin))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok && data.memos) { closedMemos = data.memos; }
+      render();
+    });
+}
+
+function moveMonth(n) {
+  current.setMonth(current.getMonth() + n);
+  render();
+}
+
+function render() {
+  var y = current.getFullYear();
+  var m = current.getMonth();
+  document.getElementById('monthLabel').textContent = y + '年' + (m + 1) + '月';
+
+  var first = new Date(y, m, 1).getDay();
+  var days = new Date(y, m + 1, 0).getDate();
+  var today = new Date();
+  var todayStr = ymd(today.getFullYear(), today.getMonth(), today.getDate());
+
+  var html = '<tr>';
+  var col = 0;
+  for (; col < first; col++) html += '<td class="empty"></td>';
+
+  for (var d = 1; d <= days; d++) {
+    var key = ymd(y, m, d);
+    var isPast = key < todayStr;
+    var isClosed = closedMemos.hasOwnProperty(key);
+    var cls = isPast ? 'past' : (isClosed ? 'closed' : '');
+    var memo = isClosed && closedMemos[key] ? '<span class="memo">' + escapeHtml(closedMemos[key]) + '</span>' : '';
+    var onclick = isPast ? '' : ' onclick="tapDay(\'' + key + '\')"';
+    html += '<td class="' + cls + '"' + onclick + '><span class="d">' + d + '</span>' + memo + '</td>';
+    col++;
+    if (col === 7 && d < days) { html += '</tr><tr>'; col = 0; }
+  }
+  for (; col < 7 && col !== 0; col++) html += '<td class="empty"></td>';
+  html += '</tr>';
+
+  document.getElementById('calBody').innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ---- モーダル ---- */
+function tapDay(key) {
+  var isClosed = closedMemos.hasOwnProperty(key);
+  var title = document.getElementById('modalTitle');
+  var memoInput = document.getElementById('memoInput');
+  var btns = document.getElementById('modalBtns');
+
+  memoInput.value = isClosed ? (closedMemos[key] || '') : '';
+
+  if (isClosed) {
+    title.textContent = key + ' は塞がっています';
+    btns.innerHTML =
+      '<button onclick="saveMemo(\'' + key + '\')">メモを保存</button>' +
+      '<button class="danger" onclick="toggle(\'' + key + '\')">この日を開ける(予約可に戻す)</button>' +
+      '<button class="sub" onclick="closeModal()">キャンセル</button>';
+  } else {
+    title.textContent = key + ' を塞ぎますか?';
+    btns.innerHTML =
+      '<button onclick="toggle(\'' + key + '\')">塞ぐ(予約不可にする)</button>' +
+      '<button class="sub" onclick="closeModal()">キャンセル</button>';
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function toggle(key) {
+  var memo = document.getElementById('memoInput').value.trim();
+  closeModal();
+  msg('通信中…');
+  document.getElementById('calArea').classList.add('loading');
+  fetch(GAS_URL + '?action=toggle'
+      + '&date=' + encodeURIComponent(key)
+      + '&pin=' + encodeURIComponent(pin)
+      + '&memo=' + encodeURIComponent(memo))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        msg(key + (data.status === 'closed' ? ' を塞ぎました' : ' を開けました'));
+      } else {
+        msg('失敗:' + (data.message || data.error));
+      }
+      return reload();
+    })
+    .catch(function () { msg('通信に失敗しました'); })
+    .finally(function () {
+      document.getElementById('calArea').classList.remove('loading');
+    });
+}
+
+function saveMemo(key) {
+  var memo = document.getElementById('memoInput').value.trim();
+  closeModal();
+  msg('通信中…');
+  fetch(GAS_URL + '?action=toggle&mode=memo'
+      + '&date=' + encodeURIComponent(key)
+      + '&pin=' + encodeURIComponent(pin)
+      + '&memo=' + encodeURIComponent(memo))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      msg(data.ok ? 'メモを保存しました' : '失敗:' + (data.message || data.error));
+      return reload();
+    })
+    .catch(function () { msg('通信に失敗しました'); });
+}
+
+/* セッション中はPIN再入力を省く */
+(function () {
+  var saved = sessionStorage.getItem('muranoyado_pin');
+  if (saved) {
+    document.getElementById('pinInput').value = saved;
+    login();
+  }
+})();
+</script>
+</body>
+</html>
