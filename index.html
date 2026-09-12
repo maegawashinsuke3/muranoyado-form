@@ -97,34 +97,52 @@
             <span class="lg-ok">○</span>ご予約いただけます
             <span class="lg-ng">×</span>ご予約いただけません
           </p>
+          <p class="cal-tap-hint">
+            日付をタップすると、チェックイン日→チェックアウト日の順に選べます。
+          </p>
         </div>
 
         <p class="cal-status" id="calStatus">空き状況を読み込んでいます…</p>
       </div>
 
       <div class="field">
-        <label for="date1">宿泊希望日（第1希望）<span class="req">必須</span></label>
-        <input type="date" id="date1" name="date1" required>
-        <p class="date-judge" id="date1Judge" hidden></p>
+        <label for="checkin">チェックイン日<span class="req">必須</span></label>
+        <input type="date" id="checkin" name="checkin" required>
+        <p class="date-judge" id="checkinJudge" hidden></p>
         <p class="hint">
+          上のカレンダーの日付をタップしても選べます。<br>
           ご予約は2日前まで承っております。<span class="js-min-date">—</span>以降の日付をお選びください。
         </p>
       </div>
 
       <div class="field">
-        <label for="date2">宿泊希望日（第2希望）<span class="opt">任意</span></label>
-        <input type="date" id="date2" name="date2">
-        <p class="date-judge" id="date2Judge" hidden></p>
+        <label for="checkout">チェックアウト日<span class="req">必須</span></label>
+        <input type="date" id="checkout" name="checkout" required>
+        <p class="date-judge" id="checkoutJudge" hidden></p>
+        <p class="nights-display" id="nightsDisplay" hidden></p>
       </div>
 
       <div class="field">
-        <label for="nights">泊数<span class="req">必須</span></label>
-        <select id="nights" name="nights" required>
+        <label for="date2">チェックイン日の第2候補<span class="opt">任意</span></label>
+        <input type="date" id="date2" name="date2">
+        <p class="date-judge" id="date2Judge" hidden></p>
+        <p class="hint">第1候補でご予約いただけない場合に備えて。</p>
+      </div>
+
+      <div class="field">
+        <label for="checkinTime">チェックイン予定時刻<span class="req">必須</span></label>
+        <select id="checkinTime" name="checkinTime" required>
           <option value="">選択してください</option>
-          <option value="1泊">1泊</option>
-          <option value="2泊">2泊</option>
-          <option value="3泊以上">3泊以上</option>
+          <option value="13:00頃">13:00頃</option>
+          <option value="14:00頃">14:00頃</option>
+          <option value="15:00頃">15:00頃</option>
+          <option value="16:00頃">16:00頃</option>
+          <option value="17:00頃">17:00頃</option>
+          <option value="18:00頃">18:00頃</option>
+          <option value="19:00以降">19:00以降</option>
+          <option value="未定（前日までにご連絡します）">未定（前日までにご連絡します）</option>
         </select>
+        <p class="hint">おおよその時刻で結構です。当日変わる場合はお電話ください。</p>
       </div>
 
       <div class="field">
