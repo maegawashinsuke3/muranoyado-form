@@ -435,3 +435,36 @@ input:focus, select:focus, textarea:focus {
     gap: 0 16px;
   }
 }
+
+/* ---------- カレンダーの範囲選択（チェックイン→チェックアウト） ---------- */
+.cal-day.cal-ok { cursor: pointer; }
+.cal-day.cal-ok:hover { background: var(--kinari-deep); }
+
+.cal-day.cal-sel {
+  background: var(--midori);
+  border-radius: var(--radius);
+}
+.cal-day.cal-sel .d,
+.cal-day.cal-sel .m { color: #fff; }
+
+.cal-day.cal-range {
+  background: var(--kinari-deep);
+  box-shadow: inset 0 -3px 0 var(--midori);
+}
+
+.cal-tap-hint {
+  margin-top: 6px;
+  font-size: .82rem;
+  color: var(--sumi-light);
+}
+
+.nights-display {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--kinari-deep);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-weight: 700;
+  color: var(--midori);
+  font-size: .95rem;
+}
