@@ -106,20 +106,19 @@
       </div>
 
       <div class="field">
-        <label for="checkin">チェックイン日<span class="req">必須</span></label>
-        <input type="date" id="checkin" name="checkin" required>
+        <label for="checkin">ご宿泊の日程<span class="req">必須</span></label>
+        <div class="range-pair">
+          <input type="date" id="checkin" name="checkin" required aria-label="チェックイン日">
+          <span class="range-arrow">→</span>
+          <input type="date" id="checkout" name="checkout" required aria-label="チェックアウト日">
+        </div>
+        <p class="nights-display" id="nightsDisplay" hidden></p>
         <p class="date-judge" id="checkinJudge" hidden></p>
+        <p class="date-judge" id="checkoutJudge" hidden></p>
         <p class="hint">
-          上のカレンダーの日付をタップしても選べます。<br>
+          左がチェックイン日、右がチェックアウト日です。上のカレンダーの日付をタップしても選べます。<br>
           ご予約は2日前まで承っております。<span class="js-min-date">—</span>以降の日付をお選びください。
         </p>
-      </div>
-
-      <div class="field">
-        <label for="checkout">チェックアウト日<span class="req">必須</span></label>
-        <input type="date" id="checkout" name="checkout" required>
-        <p class="date-judge" id="checkoutJudge" hidden></p>
-        <p class="nights-display" id="nightsDisplay" hidden></p>
       </div>
 
       <div class="field">
