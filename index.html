@@ -20,7 +20,7 @@
 <main>
 
   <!-- ============ 1. 宿の紹介文（要件書の確定稿。変更しないこと） ============ -->
-  <section class="intro">
+  <section class="intro" id="introSection">
     <p class="lead">みんなの村の暮らしを、まるごと体験できます</p>
     <p>
       みんなの村には、1日1組限定の一棟貸し「農家民宿 村の宿・丹波」があります。<br>
@@ -40,7 +40,7 @@
   </section>
 
   <!-- ============ 2. 注意書き ============ -->
-  <section class="notice">
+  <section class="notice" id="noticeSection">
     <p>
       こちらは<strong>予約リクエストフォーム</strong>です。送信いただいた時点では予約は確定しておりません。<br>
       空き状況を確認のうえ、2日以内にメールでご連絡いたします。返信をもって予約確定となります。
@@ -123,10 +123,14 @@
       </div>
 
       <div class="field">
-        <label for="date2">チェックイン日の第2候補<span class="opt">任意</span></label>
-        <input type="date" id="date2" name="date2">
+        <label for="date2Checkin">第2候補の日程<span class="opt">任意</span></label>
+        <div class="range-pair">
+          <input type="date" id="date2Checkin" name="date2Checkin" aria-label="第2候補のチェックイン日">
+          <span class="range-arrow">→</span>
+          <input type="date" id="date2Checkout" name="date2Checkout" aria-label="第2候補のチェックアウト日">
+        </div>
         <p class="date-judge" id="date2Judge" hidden></p>
-        <p class="hint">第1候補でご予約いただけない場合に備えて。</p>
+        <p class="hint">左がチェックイン日、右がチェックアウト日です。第1候補でご予約いただけない場合に備えて。</p>
       </div>
 
       <div class="field">
