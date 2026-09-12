@@ -1,5 +1,5 @@
 /* =========================================================
-   農家民宿 村の宿 予約リクエストフォーム
+   農家民宿 村の宿・丹波 予約リクエストフォーム
    ---------------------------------------------------------
    ▼▼ 設定：ここだけ書き換えます ▼▼
    GASを「ウェブアプリ」としてデプロイしたときに表示される
@@ -9,7 +9,7 @@
    ========================================================= */
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbw6-cZRCzsLRkUfqGOk-YJCXYb3oT1B7kH7M_AeSGUbujx4Q4ZsXWXiKejh6aHBMQLX/exec';
 
-/* ▼ 定員（要件：一棟貸し 定員5名） */
+/* ▼ 定員（一棟貸し 定員5名） */
 var CAPACITY = 5;
 
 /* ▼ 何日後から予約を受け付けるか
@@ -29,8 +29,10 @@ var MIN_DAYS_AHEAD = 2;
   var capacityWarn= document.getElementById('capacityWarn');
   var adultsEl    = document.getElementById('adults');
   var childrenEl  = document.getElementById('children');
-  var date1El     = document.getElementById('date1');
+  var checkinEl   = document.getElementById('checkin');
+  var checkoutEl  = document.getElementById('checkout');
   var date2El     = document.getElementById('date2');
+  var nightsDisp  = document.getElementById('nightsDisplay');
 
   var sending = false;   // 二度押し防止のフラグ
 
@@ -44,15 +46,32 @@ var MIN_DAYS_AHEAD = 2;
     return d.getFullYear() + '-' + m + '-' + day;
   }
 
+  /** 'yyyy-mm-dd' → Dateオブジェクト（時刻は0時） */
+  function toDate(ymd) {
+    var p = ymd.split('-');
+    return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  }
+
+  /** 'yyyy-mm-dd' を「9月15日」のような表示にする */
+  function 和表示(ymd) {
+    var p = ymd.split('-');
+    return Number(p[1]) + '月' + Number(p[2]) + '日';
+  }
+
+  /** チェックイン日〜チェックアウト日の泊数（日数の差） */
+  function 泊数を計算(inYmd, outYmd) {
+    return Math.round((toDate(outYmd) - toDate(inYmd)) / 86400000);
+  }
+
   var minDate = '';        // 受付できる最短の日（yyyy-mm-dd）
   var minDateLabel = '';   // 画面表示用（例：8月10日）
 
   function 最短日を設定(ymd) {
     minDate = ymd;
-    var 部品 = ymd.split('-');
-    minDateLabel = Number(部品[1]) + '月' + Number(部品[2]) + '日';
+    minDateLabel = 和表示(ymd);
 
-    date1El.min = minDate;
+    checkinEl.min = minDate;
+    checkoutEl.min = minDate;
     date2El.min = minDate;
 
     // 日付欄の下の「◯月◯日以降」の表示を更新する
@@ -71,7 +90,9 @@ var MIN_DAYS_AHEAD = 2;
      GASに「予約できない日の一覧」だけを問い合わせます。
      予定のタイトルなどは一切受け取りません。
      読み込めなかった場合はカレンダーを隠し、送信は通します
-     （最終的な空き確認はGAS側で行います）
+     （最終的な空き確認はGAS側で行います）。
+     カレンダーの日付をタップすると、
+     チェックイン日→チェックアウト日の順に選択できます。
      ======================================================= */
 
   var calendarBox = document.getElementById('calendarBox');
@@ -81,7 +102,7 @@ var MIN_DAYS_AHEAD = 2;
   var calNext     = document.getElementById('calNext');
   var calStatus   = document.getElementById('calStatus');
 
-  var 予約不可 = {};          // 例：{ '2026-08-20': true }
+  var 予約不可 = {};          // 例：{ '2026-08-20': true }（その日の「夜」が埋まっている）
   var 空き状況あり = false;    // カレンダーを読み込めたか
 
   function 月初(d) {
@@ -95,7 +116,22 @@ var MIN_DAYS_AHEAD = 2;
   var 表示上限 = 月初(new Date());
   表示上限.setMonth(表示上限.getMonth() + 13);   // 13か月先まで見られるようにする
 
-  /** カレンダーの月を描き直す */
+  /**
+   * チェックイン日〜チェックアウト日の間の「夜」がすべて空いているか。
+   * 泊まる夜は チェックイン日 〜 チェックアウト前日 なので、
+   * チェックアウト日そのものの空きは問いません。
+   */
+  function 範囲が空いている(inYmd, outYmd) {
+    var d = toDate(inYmd);
+    var out = toDate(outYmd);
+    while (d < out) {
+      if (予約不可[dateString(d)]) return false;
+      d.setDate(d.getDate() + 1);
+    }
+    return true;
+  }
+
+  /** カレンダーの月を描き直す（選択中の範囲の色付けもここで行う） */
   function カレンダー描画() {
     var 年 = 表示月.getFullYear();
     var 月 = 表示月.getMonth();
@@ -105,6 +141,9 @@ var MIN_DAYS_AHEAD = 2;
     var 曜日 = new Date(年, 月, 1).getDay();          // その月の1日の曜日
     var 日数 = new Date(年, 月 + 1, 0).getDate();     // その月の日数
     var html = '';
+
+    var イン  = checkinEl.value;
+    var アウト = checkoutEl.value;
 
     // 1日の前に空白のマスを入れて曜日を合わせる
     for (var i = 0; i < 曜日; i++) {
@@ -118,12 +157,17 @@ var MIN_DAYS_AHEAD = 2;
       if (ymd < minDate) {
         区分 = 'cal-off'; 記号 = '−';        // 受付前（今日・明日など）
       } else if (予約不可[ymd]) {
-        区分 = 'cal-ng';  記号 = '×';        // 終日予定あり＝予約できない
+        区分 = 'cal-ng';  記号 = '×';        // 終日予定あり＝その夜は予約できない
       } else {
         区分 = 'cal-ok';  記号 = '○';
       }
 
-      html += '<div class="cal-day ' + 区分 + '">' +
+      // 選択中の範囲に色を付ける
+      if (イン && ymd === イン)  区分 += ' cal-sel cal-sel-in';
+      if (アウト && ymd === アウト) 区分 += ' cal-sel cal-sel-out';
+      if (イン && アウト && ymd > イン && ymd < アウト) 区分 += ' cal-range';
+
+      html += '<div class="cal-day ' + 区分 + '" data-ymd="' + ymd + '">' +
                 '<span class="d">' + d + '</span>' +
                 '<span class="m">' + 記号 + '</span>' +
               '</div>';
@@ -143,20 +187,115 @@ var MIN_DAYS_AHEAD = 2;
     カレンダー描画();
   });
 
-  /** 選んだ日が予約できるかを、日付欄の下に表示する */
-  function 判定表示(id) {
-    var 欄 = document.getElementById(id);
-    var 表示 = document.getElementById(id + 'Judge');
-    var 値 = 欄.value;
+  /* -------------------------------------------------------
+     カレンダーのタップ選択
+     1回目のタップ＝チェックイン日、2回目＝チェックアウト日。
+     選び直したいときは、もう一度どこかの日をタップすれば
+     そこが新しいチェックイン日になります。
+     ------------------------------------------------------- */
+  calGrid.addEventListener('click', function (ev) {
+    var cell = ev.target.closest('.cal-day');
+    if (!cell || !cell.getAttribute('data-ymd')) return;
+
+    var ymd = cell.getAttribute('data-ymd');
+    if (ymd < minDate) return;                  // 受付前の日は無視
+
+    var イン  = checkinEl.value;
+    var アウト = checkoutEl.value;
+
+    if (!イン || (イン && アウト)) {
+      // 新しく選び始める（チェックイン日はその夜が空いている日だけ）
+      if (予約不可[ymd]) return;
+      checkinEl.value = ymd;
+      checkoutEl.value = '';
+    } else if (ymd <= イン) {
+      // チェックイン日より前（または同じ日）をタップ→選び直し
+      if (予約不可[ymd]) return;
+      checkinEl.value = ymd;
+      checkoutEl.value = '';
+    } else if (範囲が空いている(イン, ymd)) {
+      // チェックアウト日として確定
+      checkoutEl.value = ymd;
+    } else {
+      // 間に×の日がある→そこを新しいチェックイン日として選び直し
+      if (予約不可[ymd]) return;
+      checkinEl.value = ymd;
+      checkoutEl.value = '';
+    }
+
+    選択を反映();
+  });
+
+  /** 入力欄・泊数表示・カレンダーの色付けをまとめて更新する */
+  function 選択を反映() {
+    var イン  = checkinEl.value;
+    var アウト = checkoutEl.value;
+
+    if (イン && アウト && アウト > イン) {
+      var 泊 = 泊数を計算(イン, アウト);
+      nightsDisp.textContent =
+        和表示(イン) + ' チェックイン → ' + 和表示(アウト) + ' チェックアウト（' + 泊 + '泊）';
+      nightsDisp.hidden = false;
+    } else if (イン) {
+      nightsDisp.textContent =
+        和表示(イン) + ' チェックイン → チェックアウト日をお選びください';
+      nightsDisp.hidden = false;
+    } else {
+      nightsDisp.hidden = true;
+    }
+
+    判定表示();
+    if (空き状況あり) カレンダー描画();
+  }
+
+  /** 選んだ日程が予約できるかを、日付欄の下に表示する */
+  function 判定表示() {
+    var インJ  = document.getElementById('checkinJudge');
+    var アウトJ = document.getElementById('checkoutJudge');
+    var イン  = checkinEl.value;
+    var アウト = checkoutEl.value;
+
+    インJ.classList.remove('ok', 'ng');
+    アウトJ.classList.remove('ok', 'ng');
+    インJ.hidden = true;
+    アウトJ.hidden = true;
+
+    if (!空き状況あり) return;   // カレンダー未取得のときは判定しない
+
+    if (イン && イン >= minDate) {
+      if (予約不可[イン]) {
+        インJ.textContent = '× この日はご予約いただけません。別の日をお選びください。';
+        インJ.classList.add('ng');
+        インJ.hidden = false;
+      } else {
+        インJ.textContent = '○ この日はご予約いただけます。';
+        インJ.classList.add('ok');
+        インJ.hidden = false;
+      }
+    }
+
+    if (イン && アウト && アウト > イン && !予約不可[イン]) {
+      if (範囲が空いている(イン, アウト)) {
+        アウトJ.textContent = '○ ' + 泊数を計算(イン, アウト) + '泊でご予約いただけます。';
+        アウトJ.classList.add('ok');
+      } else {
+        アウトJ.textContent = '× この期間には、すでにご予約が入っている日が含まれています。';
+        アウトJ.classList.add('ng');
+      }
+      アウトJ.hidden = false;
+    }
+  }
+
+  /** 第2候補日の判定表示（従来どおり単日で判定） */
+  function 第2候補判定() {
+    var 表示 = document.getElementById('date2Judge');
+    var 値 = date2El.value;
 
     表示.classList.remove('ok', 'ng');
-
-    // 未入力・カレンダー未取得・受付前の日は、ここでは何も出さない
     if (!値 || !空き状況あり || 値 < minDate) {
       表示.hidden = true;
       return;
     }
-
     if (予約不可[値]) {
       表示.textContent = '× この日はご予約いただけません。別の日をお選びください。';
       表示.classList.add('ng');
@@ -167,8 +306,15 @@ var MIN_DAYS_AHEAD = 2;
     表示.hidden = false;
   }
 
-  date1El.addEventListener('change', function () { 判定表示('date1'); });
-  date2El.addEventListener('change', function () { 判定表示('date2'); });
+  checkinEl.addEventListener('change', function () {
+    // 手入力でチェックイン日を変えたら、矛盾するチェックアウト日は消す
+    if (checkoutEl.value && checkoutEl.value <= checkinEl.value) {
+      checkoutEl.value = '';
+    }
+    選択を反映();
+  });
+  checkoutEl.addEventListener('change', 選択を反映);
+  date2El.addEventListener('change', 第2候補判定);
 
   /** 読み込めなかったとき（カレンダー未作成・通信不良など） */
   function 空き状況なしで続行() {
@@ -203,8 +349,8 @@ var MIN_DAYS_AHEAD = 2;
         calStatus.classList.remove('is-warn');
 
         カレンダー描画();
-        判定表示('date1');
-        判定表示('date2');
+        判定表示();
+        第2候補判定();
       })
       .catch(function () {
         空き状況なしで続行();
@@ -248,28 +394,37 @@ var MIN_DAYS_AHEAD = 2;
       ng('email', 'メールアドレスの形式をご確認ください。');
     }
     if (!data.tel)    ng('tel',    '電話番号をご入力ください。');
-    if (!data.date1) {
-      ng('date1', '宿泊希望日（第1希望）をご入力ください。');
-    } else if (data.date1 < minDate) {
-      ng('date1', '宿泊希望日（第1希望）は' + minDateLabel +
+
+    if (!data.checkin) {
+      ng('checkin', 'チェックイン日をご入力ください。');
+    } else if (data.checkin < minDate) {
+      ng('checkin', 'チェックイン日は' + minDateLabel +
                   '以降の日付をお選びください。（ご予約は2日前まで承っております）');
-    }
-    if (data.date2 && data.date2 < minDate) {
-      ng('date2', '宿泊希望日（第2希望）は' + minDateLabel +
-                  '以降の日付をお選びください。（ご予約は2日前まで承っております）');
-    }
-    // カレンダーを読み込めているときだけ確認する
-    // （読み込めていない場合は送信を通し、GAS側で最終判断します）
-    if (空き状況あり) {
-      if (data.date1 && 予約不可[data.date1]) {
-        ng('date1', '宿泊希望日（第1希望）は、すでにご予約が入っております。別の日をお選びください。');
-      }
-      if (data.date2 && 予約不可[data.date2]) {
-        ng('date2', '宿泊希望日（第2希望）は、すでにご予約が入っております。別の日をお選びください。');
-      }
     }
 
-    if (!data.nights) ng('nights', '泊数をお選びください。');
+    if (!data.checkout) {
+      ng('checkout', 'チェックアウト日をご入力ください。');
+    } else if (data.checkin && data.checkout <= data.checkin) {
+      ng('checkout', 'チェックアウト日は、チェックイン日の翌日以降をお選びください。');
+    }
+
+    if (data.date2 && data.date2 < minDate) {
+      ng('date2', 'チェックイン日の第2候補は' + minDateLabel +
+                  '以降の日付をお選びください。（ご予約は2日前まで承っております）');
+    }
+
+    // カレンダーを読み込めているときだけ確認する
+    // （読み込めていない場合は送信を通し、GAS側で最終判断します）
+    if (空き状況あり && data.checkin && data.checkout && data.checkout > data.checkin) {
+      if (!範囲が空いている(data.checkin, data.checkout)) {
+        ng('checkout', 'ご希望の期間には、すでにご予約が入っている日が含まれております。日程をご確認ください。');
+      }
+    }
+    if (空き状況あり && data.date2 && 予約不可[data.date2]) {
+      ng('date2', 'チェックイン日の第2候補は、すでにご予約が入っております。別の日をお選びください。');
+    }
+
+    if (!data.checkinTime) ng('checkinTime', 'チェックイン予定時刻をお選びください。');
     if (!data.adults) ng('adults', '大人の人数をお選びください。');
 
     if (totalGuests() > CAPACITY) {
@@ -291,20 +446,28 @@ var MIN_DAYS_AHEAD = 2;
     var f = form.elements;
     function val(key) { return (f[key].value || '').trim(); }
 
+    var チェックイン  = f.checkin.value;
+    var チェックアウト = f.checkout.value;
+    var 泊 = (チェックイン && チェックアウト && チェックアウト > チェックイン)
+              ? 泊数を計算(チェックイン, チェックアウト) : 0;
+
     return {
-      name:      val('name'),
-      email:     val('email'),
-      tel:       val('tel'),
-      date1:     f.date1.value,
-      date2:     f.date2.value,
-      nights:    f.nights.value,
-      adults:    f.adults.value,
-      children:  f.children.value,
-      childAges: val('childAges'),
+      name:        val('name'),
+      email:       val('email'),
+      tel:         val('tel'),
+      checkin:     チェックイン,
+      checkout:    チェックアウト,
+      nights:      泊 ? (泊 + '泊') : '',
+      nightsCount: 泊,
+      date2:       f.date2.value,
+      checkinTime: f.checkinTime.value,
+      adults:      f.adults.value,
+      children:    f.children.value,
+      childAges:   val('childAges'),
       experiences: experiences.join('、'),
-      source:    f.source.value,
-      message:   val('message'),
-      company:   val('company')   // honeypot（人は空のまま）
+      source:      f.source.value,
+      message:     val('message'),
+      company:     val('company')   // honeypot（人は空のまま）
     };
   }
 
