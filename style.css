@@ -468,3 +468,16 @@ input:focus, select:focus, textarea:focus {
   color: var(--midori);
   font-size: .95rem;
 }
+
+/* 第2候補の日程（チェックイン→チェックアウトを横並びに） */
+.range-pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.range-pair input { flex: 1; min-width: 0; }
+.range-arrow {
+  flex: none;
+  color: var(--sumi-light);
+  font-size: 14px;
+}
