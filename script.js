@@ -31,7 +31,8 @@ var MIN_DAYS_AHEAD = 2;
   var childrenEl  = document.getElementById('children');
   var checkinEl   = document.getElementById('checkin');
   var checkoutEl  = document.getElementById('checkout');
-  var date2El     = document.getElementById('date2');
+  var date2InEl   = document.getElementById('date2Checkin');
+  var date2OutEl  = document.getElementById('date2Checkout');
   var nightsDisp  = document.getElementById('nightsDisplay');
 
   var sending = false;   // 二度押し防止のフラグ
@@ -63,6 +64,13 @@ var MIN_DAYS_AHEAD = 2;
     return Math.round((toDate(outYmd) - toDate(inYmd)) / 86400000);
   }
 
+  /** 'yyyy-mm-dd' の翌日を返す */
+  function 翌日(ymd) {
+    var d = toDate(ymd);
+    d.setDate(d.getDate() + 1);
+    return dateString(d);
+  }
+
   var minDate = '';        // 受付できる最短の日（yyyy-mm-dd）
   var minDateLabel = '';   // 画面表示用（例：8月10日）
 
@@ -71,8 +79,9 @@ var MIN_DAYS_AHEAD = 2;
     minDateLabel = 和表示(ymd);
 
     checkinEl.min = minDate;
-    checkoutEl.min = minDate;
-    date2El.min = minDate;
+    checkoutEl.min = checkinEl.value ? 翌日(checkinEl.value) : minDate;
+    date2InEl.min = minDate;
+    date2OutEl.min = date2InEl.value ? 翌日(date2InEl.value) : minDate;
 
     // 日付欄の下の「◯月◯日以降」の表示を更新する
     Array.prototype.forEach.call(document.querySelectorAll('.js-min-date'), function (el) {
@@ -231,6 +240,10 @@ var MIN_DAYS_AHEAD = 2;
     var イン  = checkinEl.value;
     var アウト = checkoutEl.value;
 
+    // チェックイン日が決まったら、チェックアウト欄はその翌日以降しか
+    // 選べないようにする（日付ピッカーもその月から開く）
+    checkoutEl.min = イン ? 翌日(イン) : minDate;
+
     if (イン && アウト && アウト > イン) {
       var 泊 = 泊数を計算(イン, アウト);
       nightsDisp.textContent =
@@ -286,24 +299,46 @@ var MIN_DAYS_AHEAD = 2;
     }
   }
 
-  /** 第2候補日の判定表示（従来どおり単日で判定） */
+  /** 第2候補の判定表示（チェックイン→チェックアウトの範囲で判定） */
   function 第2候補判定() {
     var 表示 = document.getElementById('date2Judge');
-    var 値 = date2El.value;
+    var イン  = date2InEl.value;
+    var アウト = date2OutEl.value;
+
+    // チェックアウト欄はチェックイン日の翌日以降しか選べないようにする
+    date2OutEl.min = イン ? 翌日(イン) : minDate;
 
     表示.classList.remove('ok', 'ng');
-    if (!値 || !空き状況あり || 値 < minDate) {
-      表示.hidden = true;
+    表示.hidden = true;
+
+    if (!イン && !アウト) return;
+
+    if (イン && アウト && アウト <= イン) {
+      表示.textContent = '× チェックアウト日は、チェックイン日の翌日以降をお選びください。';
+      表示.classList.add('ng');
+      表示.hidden = false;
       return;
     }
-    if (予約不可[値]) {
+
+    if (!空き状況あり) return;
+
+    if (イン && イン >= minDate && 予約不可[イン]) {
       表示.textContent = '× この日はご予約いただけません。別の日をお選びください。';
       表示.classList.add('ng');
-    } else {
-      表示.textContent = '○ この日はご予約いただけます。';
-      表示.classList.add('ok');
+      表示.hidden = false;
+      return;
     }
-    表示.hidden = false;
+
+    if (イン && アウト && アウト > イン && イン >= minDate) {
+      if (範囲が空いている(イン, アウト)) {
+        表示.textContent = '○ 第2候補:' + 泊数を計算(イン, アウト) + '泊でご予約いただけます。';
+        表示.classList.add('ok');
+      } else {
+        表示.textContent = '× この期間には、すでにご予約が入っている日が含まれています。';
+        表示.classList.add('ng');
+      }
+      表示.hidden = false;
+    }
   }
 
   checkinEl.addEventListener('change', function () {
@@ -314,7 +349,13 @@ var MIN_DAYS_AHEAD = 2;
     選択を反映();
   });
   checkoutEl.addEventListener('change', 選択を反映);
-  date2El.addEventListener('change', 第2候補判定);
+  date2InEl.addEventListener('change', function () {
+    if (date2OutEl.value && date2OutEl.value <= date2InEl.value) {
+      date2OutEl.value = '';
+    }
+    第2候補判定();
+  });
+  date2OutEl.addEventListener('change', 第2候補判定);
 
   /** 読み込めなかったとき（カレンダー未作成・通信不良など） */
   function 空き状況なしで続行() {
@@ -408,9 +449,18 @@ var MIN_DAYS_AHEAD = 2;
       ng('checkout', 'チェックアウト日は、チェックイン日の翌日以降をお選びください。');
     }
 
-    if (data.date2 && data.date2 < minDate) {
-      ng('date2', 'チェックイン日の第2候補は' + minDateLabel +
+    if (data.date2Checkin && !data.date2Checkout) {
+      ng('date2Checkout', '第2候補のチェックアウト日もお選びください。');
+    }
+    if (!data.date2Checkin && data.date2Checkout) {
+      ng('date2Checkin', '第2候補のチェックイン日もお選びください。');
+    }
+    if (data.date2Checkin && data.date2Checkin < minDate) {
+      ng('date2Checkin', '第2候補のチェックイン日は' + minDateLabel +
                   '以降の日付をお選びください。（ご予約は2日前まで承っております）');
+    }
+    if (data.date2Checkin && data.date2Checkout && data.date2Checkout <= data.date2Checkin) {
+      ng('date2Checkout', '第2候補のチェックアウト日は、チェックイン日の翌日以降をお選びください。');
     }
 
     // カレンダーを読み込めているときだけ確認する
@@ -420,8 +470,11 @@ var MIN_DAYS_AHEAD = 2;
         ng('checkout', 'ご希望の期間には、すでにご予約が入っている日が含まれております。日程をご確認ください。');
       }
     }
-    if (空き状況あり && data.date2 && 予約不可[data.date2]) {
-      ng('date2', 'チェックイン日の第2候補は、すでにご予約が入っております。別の日をお選びください。');
+    if (空き状況あり && data.date2Checkin && data.date2Checkout &&
+        data.date2Checkout > data.date2Checkin) {
+      if (!範囲が空いている(data.date2Checkin, data.date2Checkout)) {
+        ng('date2Checkin', '第2候補の期間には、すでにご予約が入っている日が含まれております。日程をご確認ください。');
+      }
     }
 
     if (!data.checkinTime) ng('checkinTime', 'チェックイン予定時刻をお選びください。');
@@ -459,7 +512,8 @@ var MIN_DAYS_AHEAD = 2;
       checkout:    チェックアウト,
       nights:      泊 ? (泊 + '泊') : '',
       nightsCount: 泊,
-      date2:       f.date2.value,
+      date2Checkin:  f.date2Checkin.value,
+      date2Checkout: f.date2Checkout.value,
       checkinTime: f.checkinTime.value,
       adults:      f.adults.value,
       children:    f.children.value,
@@ -475,6 +529,10 @@ var MIN_DAYS_AHEAD = 2;
      5. 送信完了画面へ切り替える
      ------------------------------------------------------- */
   function showThanks() {
+    var intro  = document.getElementById('introSection');
+    var notice = document.getElementById('noticeSection');
+    if (intro)  intro.hidden = true;
+    if (notice) notice.hidden = true;
     formSection.hidden = true;
     thanks.hidden = false;
     window.scrollTo(0, 0);
