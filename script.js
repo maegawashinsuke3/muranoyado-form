@@ -9,8 +9,8 @@
    ========================================================= */
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbw6-cZRCzsLRkUfqGOk-YJCXYb3oT1B7kH7M_AeSGUbujx4Q4ZsXWXiKejh6aHBMQLX/exec';
 
-/* ▼ 定員（一棟貸し 定員5名） */
-var CAPACITY = 5;
+/* ▼ 定員（一棟貸し 定員10名） */
+var CAPACITY = 10;
 
 /* ▼ 何日後から予約を受け付けるか
    2 なら「2日後の日付から選択可能」＝今日と明日は選べません。
